@@ -76,7 +76,8 @@ kruskal.test(Shannon ~ env_group, data = alpha_df)
 ## Results
 
 ### 1. Alpha diversity differs significantly by environment
-![Alpha diversity boxplot](alpha_diversity_boxplot.png)
+
+![Alpha Diversity](alpha_diversity_boxplot.png)
 
 Soil samples showed the highest Shannon diversity (≈6.5–6.7), skin samples
 were intermediate (≈4.3–4.9), and water samples were both lowest and most
