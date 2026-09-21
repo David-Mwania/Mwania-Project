@@ -98,7 +98,7 @@ skin and water. Water samples were dominated by **Cyanobacteria** and
 
 Of the top 25 most abundant OTUs tested with `DESeq2`, 15 had a valid
 adjusted p-value, and **13 of those 15 (87%) were statistically significant
-(padj < 0.05)** — meaning the large majority of dominant taxa are not just
+(padj < 0.05)**  meaning the large majority of dominant taxa are not just
 present in different amounts by chance, but show a real, environment-linked
 abundance pattern. Water samples in particular showed several
 Cyanobacteria and Actinobacteria OTUs at visibly higher abundance than in
