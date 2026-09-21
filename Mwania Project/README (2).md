@@ -112,7 +112,7 @@ habitat compared to the more selective conditions of skin (host immune
 pressure, pH, temperature) or open water (nutrient limitation, dilution).
 The phylum-level composition results align with established microbial
 ecology findings  e.g., Firmicutes' association with skin/host-associated
-environments, and Cyanobacteria's association with aquatic systems — which
+environments, and Cyanobacteria's association with aquatic systems  which
 is a useful internal sanity check that the pipeline is behaving as
 expected on real data.
 
