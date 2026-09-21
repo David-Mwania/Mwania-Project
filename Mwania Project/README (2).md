@@ -25,7 +25,7 @@ differ significantly between soil, water, and skin environments, reflecting
 their distinct ecological conditions.
 
 ## Data source
-[**GlobalPatterns**](https://joey711.github.io/phyloseq/) — a real 16S rRNA
+[**GlobalPatterns**](https://joey711.github.io/phyloseq/)  a real 16S rRNA
 microbial survey dataset from Caporaso et al. (2011), *"Global patterns of
 16S rRNA diversity at a depth of millions of sequences per sample,"* PNAS
 108 (Suppl 1): 4516–4522. The dataset ships directly with the R `phyloseq`
@@ -111,7 +111,7 @@ higher diversity likely reflects its more heterogeneous, spatially complex
 habitat compared to the more selective conditions of skin (host immune
 pressure, pH, temperature) or open water (nutrient limitation, dilution).
 The phylum-level composition results align with established microbial
-ecology findings — e.g., Firmicutes' association with skin/host-associated
+ecology findings  e.g., Firmicutes' association with skin/host-associated
 environments, and Cyanobacteria's association with aquatic systems — which
 is a useful internal sanity check that the pipeline is behaving as
 expected on real data.
