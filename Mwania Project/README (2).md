@@ -124,7 +124,7 @@ means these results should be read as illustrative rather than definitive.
 Soil, water, and skin microbiomes differ significantly both in overall
 diversity and in specific taxonomic composition, supporting the initial
 hypothesis. This project demonstrates an end-to-end microbiome analysis
-workflow — from raw count data through diversity statistics, compositional
+workflow from raw count data through diversity statistics, compositional
 visualization, and formal differential abundance testing — entirely in R.
 
 ## Tools
