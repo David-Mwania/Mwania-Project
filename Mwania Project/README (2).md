@@ -89,7 +89,7 @@ statistically significant: **χ² = 7.47, df = 2, p = 0.024**.
 
 Skin was dominated by **Firmicutes** (~35% mean relative abundance) and
 **Proteobacteria** (~32%). Soil showed a more even spread, notably including
-**Verrucomicrobia** and **Acidobacteria** — phyla essentially absent from
+**Verrucomicrobia** and **Acidobacteria** phyla essentially absent from
 skin and water. Water samples were dominated by **Cyanobacteria** and
 **Bacteroidetes**, consistent with photosynthetic and aquatic-adapted taxa.
 
