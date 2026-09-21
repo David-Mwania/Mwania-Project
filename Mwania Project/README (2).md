@@ -3,7 +3,7 @@
 
 ## Introduction
 Microbial communities differ dramatically depending on the environment they
-inhabit — soil, water, and skin each present very different conditions
+inhabit soil, water, and skin each present very different conditions
 (nutrient availability, moisture, host interaction, exposure to oxygen), and
 these conditions shape which microorganisms thrive. Understanding *how* and
 *how much* these communities differ is a foundational question in microbial
@@ -15,8 +15,8 @@ published 16S rRNA sequencing data, rather than a toy or simulated dataset.
 
 ## Objective
 To compare microbial community composition and diversity across three
-environment types — **Soil**, **Water** (freshwater + ocean), and **Skin**
-— and test whether the observed differences are statistically meaningful
+environment types **Soil**, **Water** (freshwater + ocean), and **Skin**
+and test whether the observed differences are statistically meaningful
 rather than due to chance.
 
 ## Hypothesis
