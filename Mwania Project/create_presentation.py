@@ -1,399 +1,549 @@
 #!/usr/bin/env python3
 """
-Create an improved, visually appealing PowerPoint presentation for the paper:
+Professional PowerPoint presentation for:
 "Functional dissection of conserved RNAi pathways in antiviral immunity of several hemipteran insects"
-Figures extracted from the PDF are inserted on the relevant slides.
+Clean layout, properly cropped figures, consistent design.
 """
 
 import os
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.dml.color import RGBColor
-from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
-from pptx.enum.shapes import MSO_SHAPE_TYPE
-from pptx.oxml.ns import qn
-from pptx.oxml import parse_xml
+from pptx.enum.shapes import MSO_SHAPE
+from PIL import Image as PILImage
 
-# Paths
 BASE_DIR = "/home/davidmwania/Mwania Project"
 FIGURES_DIR = os.path.join(BASE_DIR, "paper_figures")
+OUTPUT = os.path.join(BASE_DIR, "RNAi_Hemiptera_Presentation.pptx")
 
-# Color palette
-DARK_BLUE = RGBColor(0, 51, 102)
-MEDIUM_BLUE = RGBColor(0, 102, 153)
-LIGHT_BLUE = RGBColor(173, 216, 230)
-ACCENT_ORANGE = RGBColor(230, 126, 34)
-TEXT_DARK = RGBColor(40, 40, 40)
-TEXT_LIGHT = RGBColor(255, 255, 255)
-BG_LIGHT = RGBColor(250, 250, 250)
+# Professional color palette
+NAVY = RGBColor(16, 42, 67)        # Deep navy for headers
+BLUE = RGBColor(31, 78, 121)       # Medium blue
+STEEL = RGBColor(70, 130, 180)     # Steel blue accent
+LIGHT = RGBColor(245, 247, 250)    # Light background
+WHITE = RGBColor(255, 255, 255)
+DARK_TEXT = RGBColor(33, 37, 41)
+MUTED = RGBColor(108, 117, 125)
+ORANGE = RGBColor(230, 126, 34)
+GREEN = RGBColor(40, 167, 69)
+RED = RGBColor(220, 53, 69)
 
-def add_background(slide, color=BG_LIGHT):
-    """Add a full-slide background rectangle at the back."""
-    shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(13.333), Inches(7.5))
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = color
+def add_bg(slide, color=LIGHT):
+    shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, Inches(13.333), Inches(7.5))
+    shape.fill.solid(); shape.fill.fore_color.rgb = color
     shape.line.fill.background()
-    # Move to back
     slide.shapes._spTree.remove(shape._element)
     slide.shapes._spTree.insert(2, shape._element)
 
-def add_header_bar(slide):
-    """Add a top header bar."""
-    shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(13.333), Inches(0.15))
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = DARK_BLUE
-    shape.line.fill.background()
+def add_header(slide, title, subtitle=None):
+    # Top band
+    band = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, Inches(13.333), Inches(1.15))
+    band.fill.solid(); band.fill.fore_color.rgb = NAVY
+    band.line.fill.background()
+    band.shadow.inherit = False
+    
+    # Accent line under band
+    line = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, Inches(1.15), Inches(13.333), Inches(0.06))
+    line.fill.solid(); line.fill.fore_color.rgb = ORANGE
+    line.line.fill.background()
+    
+    # Title text
+    tb = slide.shapes.add_textbox(Inches(0.6), Inches(0.18), Inches(12.1), Inches(0.85))
+    tf = tb.text_frame; tf.word_wrap = True
+    p = tf.paragraphs[0]; p.text = title
+    p.font.size = Pt(28); p.font.bold = True
+    p.font.color.rgb = WHITE; p.font.name = "Calibri"
+    
+    if subtitle:
+        stb = slide.shapes.add_textbox(Inches(0.6), Inches(0.75), Inches(12.1), Inches(0.35))
+        stf = stb.text_frame; stf.word_wrap = True
+        sp = stf.paragraphs[0]; sp.text = subtitle
+        sp.font.size = Pt(13); sp.font.color.rgb = RGBColor(200, 215, 230); sp.font.name = "Calibri"
 
-def add_title_text(slide, title, top=Inches(0.35), left=Inches(0.5), width=Inches(12.333), 
-                   font_size=Pt(32), bold=True, color=DARK_BLUE, align=PP_ALIGN.LEFT):
-    title_box = slide.shapes.add_textbox(left, top, width, Inches(0.8))
-    tf = title_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = title
-    p.font.size = font_size
-    p.font.bold = bold
-    p.font.color.rgb = color
-    p.alignment = align
-    return title_box
+def add_footer(slide, page_num):
+    ftb = slide.shapes.add_textbox(Inches(0.6), Inches(7.08), Inches(6), Inches(0.3))
+    ftf = ftb.text_frame; fp = ftf.paragraphs[0]
+    fp.text = "Zhang et al., 2026 | PLoS Pathogens 22(10): e1014753"
+    fp.font.size = Pt(10); fp.font.color.rgb = MUTED; fp.font.name = "Calibri"
+    
+    ptb = slide.shapes.add_textbox(Inches(11.5), Inches(7.08), Inches(1.2), Inches(0.3))
+    ptf = ptb.text_frame; pp = ptf.paragraphs[0]
+    pp.text = f"{page_num}"; pp.font.size = Pt(10); pp.font.color.rgb = MUTED
+    pp.alignment = PP_ALIGN.RIGHT; pp.font.name = "Calibri"
 
-def add_bullets(slide, bullets, left=Inches(0.6), top=Inches(1.3), width=Inches(12.333), 
-                height=Inches(5.8), font_size=Pt(20), line_spacing=1.3):
+def add_bullets(slide, items, left, top, width, height, font_size=18, gap=8, title=None, title_color=NAVY):
     box = slide.shapes.add_textbox(left, top, width, height)
-    tf = box.text_frame
-    tf.word_wrap = True
-    for i, bullet in enumerate(bullets):
-        if i == 0:
-            p = tf.paragraphs[0]
-        else:
-            p = tf.add_paragraph()
-        p.text = bullet
-        p.font.size = font_size
-        p.font.color.rgb = TEXT_DARK
-        p.space_after = Pt(10)
-        p.level = 0
+    tf = box.text_frame; tf.word_wrap = True
+    tf.margin_left = Inches(0.05); tf.margin_right = Inches(0.05)
+    first = True
+    if title:
+        p = tf.paragraphs[0]; first = False
+        p.text = title; p.font.size = Pt(font_size + 2); p.font.bold = True
+        p.font.color.rgb = title_color; p.space_after = Pt(gap + 4); p.font.name = "Calibri"
+    for item in items:
+        p = tf.paragraphs[0] if first else tf.add_paragraph()
+        first = False
+        p.text = "• " + item if not item.startswith(("•", "–", "–")) else item
+        p.font.size = Pt(font_size); p.font.color.rgb = DARK_TEXT
+        p.font.name = "Calibri"; p.space_after = Pt(gap)
+        p.line_spacing = 1.15
     return box
 
-def add_image(slide, image_path, left, top, width=None, height=None):
-    """Add an image with optional width or height, preserving aspect ratio."""
-    if not os.path.exists(image_path):
-        print(f"Warning: image not found: {image_path}")
+def crop_image_for_slide(img_path, max_w_in, max_h_in):
+    """Crop and resize an image to fit within max_w_in x max_h_in, removing page margins."""
+    if not os.path.exists(img_path):
+        return None, None
+    img = PILImage.open(img_path)
+    w, h = img.size
+    
+    # Crop: remove page header/footer margins (approx top 12%, bottom 8%)
+    # and side margins (approx 6% each side) to isolate the figure
+    crop_top = int(h * 0.12)
+    crop_bottom = int(h * 0.92)
+    crop_left = int(w * 0.06)
+    crop_right = int(w * 0.94)
+    
+    if crop_bottom > crop_top and crop_right > crop_left:
+        img = img.crop((crop_left, crop_top, crop_right, crop_bottom))
+        w, h = img.size
+    
+    # Save cropped version
+    cropped_path = img_path.replace(".png", "_crop.png")
+    img.save(cropped_path)
+    
+    aspect = h / w
+    max_h_px = max_h_in * 96  # approximate
+    max_w_px = max_w_in * 96
+    
+    if w > max_w_px or h > max_h_px:
+        if w / h > max_w_px / max_h_px:
+            new_w = max_w_px
+            new_h = int(new_w * aspect)
+        else:
+            new_h = max_h_px
+            new_w = int(new_h / aspect)
+        img = img.resize((new_w, new_h), PILImage.LANCZOS)
+        img.save(cropped_path)
+    
+    return cropped_path, (w / h)
+
+def add_fig(slide, img_path, left, top, width=None, height=None):
+    """Add an image centered in the given area."""
+    if not os.path.exists(img_path):
         return None
-    from PIL import Image as PILImage
-    img = PILImage.open(image_path)
-    w_px, h_px = img.size
-    aspect = h_px / w_px
-    if width is not None and height is None:
-        height = width * aspect
-    elif height is not None and width is None:
-        width = height / aspect
-    elif width is None and height is None:
-        width = Inches(4.0)
-        height = width * aspect
-    pic = slide.shapes.add_picture(image_path, left, top, width=width, height=height)
-    return pic
-
-def make_title_slide(prs, title, subtitle):
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_background(slide, DARK_BLUE)
-    
-    # Decorative accent bar
-    bar = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(4.7), Inches(13.333), Inches(0.05))
-    bar.fill.solid()
-    bar.fill.fore_color.rgb = ACCENT_ORANGE
-    bar.line.fill.background()
-    
-    title_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.0), Inches(11.733), Inches(1.8))
-    tf = title_box.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.text = title
-    p.font.size = Pt(44)
-    p.font.bold = True
-    p.font.color.rgb = TEXT_LIGHT
-    p.alignment = PP_ALIGN.CENTER
-    
-    sub_box = slide.shapes.add_textbox(Inches(0.8), Inches(4.0), Inches(11.733), Inches(2.0))
-    tf = sub_box.text_frame
-    tf.word_wrap = True
-    p = tf.paragraphs[0]
-    p.text = subtitle
-    p.font.size = Pt(22)
-    p.font.color.rgb = RGBColor(220, 220, 220)
-    p.alignment = PP_ALIGN.CENTER
-    return slide
-
-def make_section_slide(prs, title):
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_background(slide, DARK_BLUE)
-    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(2.8), Inches(12.333), Inches(1.5))
-    tf = title_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = title
-    p.font.size = Pt(48)
-    p.font.bold = True
-    p.font.color.rgb = TEXT_LIGHT
-    p.alignment = PP_ALIGN.CENTER
-    return slide
-
-def make_content_slide(prs, title, bullets, image_path=None, image_left=None, image_top=None, image_width=None, 
-                       image_height=None, two_column=False, right_bullets=None):
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_background(slide)
-    add_header_bar(slide)
-    add_title_text(slide, title)
-    
-    if image_path and two_column:
-        # Left: bullets, Right: image
-        add_bullets(slide, bullets, left=Inches(0.5), top=Inches(1.25), width=Inches(6.5), height=Inches(5.8), font_size=Pt(18))
-        add_image(slide, image_path, left=Inches(7.2), top=image_top or Inches(1.4), width=image_width or Inches(5.5), height=image_height)
-    elif image_path:
-        # Bullets on top/bottom, image centered below
-        add_bullets(slide, bullets, left=Inches(0.6), top=Inches(1.25), width=Inches(12.0), height=Inches(2.2), font_size=Pt(18))
-        add_image(slide, image_path, left=image_left or Inches(2.5), top=image_top or Inches(3.6), width=image_width or Inches(8.0), height=image_height)
+    cropped, aspect = crop_image_for_slide(img_path, width or 5, height or 5)
+    if cropped is None:
+        return None
+    if width and not height:
+        h = width * aspect
+        return slide.shapes.add_picture(cropped, left, top, width=width, height=h)
+    elif height and not width:
+        w = height / aspect
+        return slide.shapes.add_picture(cropped, left, top, width=w, height=height)
     else:
-        add_bullets(slide, bullets, left=Inches(0.6), top=Inches(1.25), width=Inches(12.0), height=Inches(5.8), font_size=Pt(20))
-    return slide
+        return slide.shapes.add_picture(cropped, left, top, width=width, height=height)
 
-# Initialize presentation
 prs = Presentation()
 prs.slide_width = Inches(13.333)
 prs.slide_height = Inches(7.5)
+BLANK = prs.slide_layouts[6]
 
-# Slide 1: Title
-slide1 = make_title_slide(prs,
-    "Functional dissection of conserved RNAi pathways\nin antiviral immunity of several hemipteran insects",
-    "Zhang Y, Ye Z-X, Ma Q-L, Wang B-Y, Zhuo J-C, Huang H-J, Zhang C-X, Chen J-P, Li J-M\n"
-    "PLoS Pathogens, 2026, 22(10): e1014753\n"
-    "DOI: https://doi.org/10.1371/journal.ppat.1014753\n\n"
-    "Presented by: [Your Name]"
-)
+# ============================================================
+# SLIDE 1: TITLE
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s, NAVY)
+# Decorative bands
+band1 = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, Inches(2.9), Inches(13.333), Inches(0.08))
+band1.fill.solid(); band1.fill.fore_color.rgb = ORANGE; band1.line.fill.background()
 
-# Slide 2: Background
-s2 = make_content_slide(prs, "Background: RNAi Pathways in Insects", [
-    "RNA interference (RNAi) is a sequence-specific gene-silencing mechanism.",
-    "Three main small silencing RNA pathways:",
-    "   • miRNA pathway → gene regulation & development",
-    "   • piRNA pathway → transposon suppression & germline maintenance",
-    "   • siRNA pathway → antiviral defense (canonical view)",
-    "Most knowledge comes from Dipteran model insects (fruit fly, mosquito).",
-    "Hemipteran pests (planthoppers, whiteflies) transmit rice viruses, but their RNAi biology is largely unexplored."
-])
+tb = s.shapes.add_textbox(Inches(0.8), Inches(1.7), Inches(11.7), Inches(1.6))
+tf = tb.text_frame; tf.word_wrap = True
+p = tf.paragraphs[0]; p.text = "Functional dissection of conserved RNAi pathways in antiviral immunity of several hemipteran insects"
+p.font.size = Pt(34); p.font.bold = True; p.font.color.rgb = WHITE
+p.alignment = PP_ALIGN.CENTER; p.font.name = "Calibri"
 
-# Slide 3: Study Question
-s3 = make_content_slide(prs, "Study Question & Objectives", [
+sub = s.shapes.add_textbox(Inches(0.8), Inches(3.4), Inches(11.7), Inches(2.2))
+tf = sub.text_frame; tf.word_wrap = True
+lines = [
+    "Yan Zhang, Zhuang-Xin Ye, Qing-Lu Ma, Bi-Yun Wang, Ji-Chong Zhuo, Hai-Jian Huang,",
+    "Chuan-Xi Zhang, Jian-Ping Chen, Jun-Min Li",
+    "",
+    "PLoS Pathogens, 2026, 22(10): e1014753",
+    "DOI: 10.1371/journal.ppat.1014753",
+    "",
+    "Presented by: [Your Name]",
+]
+for i, ln in enumerate(lines):
+    p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+    p.text = ln
+    p.font.size = Pt(16 if i in (0,1) else 14)
+    p.font.bold = (i == 0)
+    p.font.color.rgb = RGBColor(210, 220, 230) if i not in (0,1) else WHITE
+    p.alignment = PP_ALIGN.CENTER; p.font.name = "Calibri"
+    p.space_after = Pt(6)
+
+# ============================================================
+# SLIDE 2: BACKGROUND
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Background: RNA Silencing Pathways in Insects",
+           "Why study RNAi in hemipteran insects?")
+add_bullets(s, [
+    "RNA interference (RNAi) is a sequence-specific gene-silencing mechanism found in insects.",
+    "Three conserved small silencing RNA pathways:",
+    "   • miRNA pathway — gene regulation, development, reproduction",
+    "   • piRNA pathway — transposon suppression, germline maintenance",
+    "   • siRNA pathway — canonical antiviral defense",
+    "Most functional data come from Dipteran models (Drosophila, mosquitoes).",
+    "Hemipteran pests (planthoppers, whiteflies) transmit economically important plant viruses,",
+    "but their RNAi biology in antiviral immunity is poorly understood.",
+], Inches(0.7), Inches(1.5), Inches(12.0), Inches(5.2), font_size=19)
+add_footer(s, 2)
+
+# ============================================================
+# SLIDE 3: STUDY QUESTION
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Study Question & Objectives",
+           "What did the researchers set out to answer?")
+add_bullets(s, [
     "Main research question:",
-    "  What are the functional roles of the conserved miRNA, piRNA, and siRNA pathways in hemipteran insects, particularly in antiviral immunity?",
+    "   What are the functional roles of the conserved miRNA, piRNA, and siRNA pathways",
+    "   in hemipteran antiviral immunity?",
     "",
     "Specific objectives:",
-    "  1. Screen core RNAi genes in Laodelphax striatellus (small brown planthopper).",
-    "  2. Determine which pathway(s) restrict viral accumulation.",
-    "  3. Test whether the findings are conserved across multiple hemipteran species."
-])
+    "   1. Functionally screen core RNAi genes in Laodelphax striatellus (small brown planthopper).",
+    "   2. Determine which pathway(s) restrict viral accumulation.",
+    "   3. Test whether the findings are conserved across multiple hemipteran species.",
+], Inches(0.7), Inches(1.5), Inches(12.0), Inches(5.2), font_size=19)
+add_footer(s, 3)
 
-# Slide 4: Study Design
-s4 = make_content_slide(prs, "Study Design", [
-    "Type: Laboratory functional genomics study (RNAi + CRISPR/Cas9).",
+# ============================================================
+# SLIDE 4: STUDY DESIGN
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Study Design",
+           "Experimental system and species tested")
+add_bullets(s, [
+    "Type: Laboratory functional genomics study (RNAi knockdown + CRISPR/Cas9 knockout).",
     "Primary model: Laodelphax striatellus (small brown planthopper).",
-    "Cross-species validation:",
+    "Cross-species validation in:",
     "   • Sogatella furcifera (rice planthopper)",
     "   • Nilaparvata lugens (brown planthopper)",
     "   • Bemisia tabaci (whitefly)",
-    "Treatment: dsRNA targeting core RNAi genes vs. ds-GFP control.",
-    "Readouts: survival, fecundity, development, viral RNA levels, small RNA profiles."
-])
+    "Treatment: dsRNA injection targeting RNAi genes vs. ds-GFP negative control.",
+    "Readouts: survival, fecundity, development, viral RNA load, small RNA profiles.",
+], Inches(0.7), Inches(1.5), Inches(12.0), Inches(5.2), font_size=19)
+add_footer(s, 4)
 
-# Slide 5: Methods overview
-s5 = make_content_slide(prs, "Methods Overview", [
+# ============================================================
+# SLIDE 5: METHODS
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Methods Overview",
+           "Core experimental approaches")
+add_bullets(s, [
     "RNAi knockdown: dsRNA microinjection of AGO1/2, DCR1/2, R2D2, Piwi, AGO3.",
-    "RT-qPCR: gene-expression and viral quantification (normalized to ACTIN).",
+    "RT-qPCR: gene expression and viral RNA quantification (normalized to ACTIN).",
     "Small RNA sequencing: profile miRNA, piRNA, and virus-derived siRNAs (vsiRNAs).",
-    "RNAi-of-RNAi assay: test RNAi efficiency after pre-knockdown of key genes.",
-    "CRISPR/Cas9: generate DCR2 mutant alleles to assess developmental requirements.",
-    "Statistics: Student’s t-test, one-way ANOVA with Tukey, and Log-rank tests."
-])
+    "RNAi-of-RNAi assay: test whether pre-knockdown impairs reporter silencing.",
+    "CRISPR/Cas9: generate DCR2 mutant alleles to test developmental requirement.",
+    "Statistics: Student's t-test, one-way ANOVA (Tukey), Log-rank (Mantel-Cox).",
+], Inches(0.7), Inches(1.5), Inches(12.0), Inches(5.2), font_size=19)
+add_footer(s, 5)
 
-# Slide 6: Key Observation 1 - miRNA/piRNA + image Fig 2
-s6 = make_content_slide(prs, "Key Observation 1: miRNA & piRNA Pathways Govern Development", [
-    "miRNA pathway (AGO1, DCR1) knockdown:",
-    "   • Reduced survival and molting defects.",
-    "   • Severely reduced fecundity; eggs failed to hatch.",
-    "   • 22-nt miRNA production dropped.",
-    "piRNA pathway (Piwi, AGO3) knockdown:",
-    "   • Abnormal wing curls and reduced egg production.",
-    "   • Extended developmental duration.",
-    "Interpretation: These pathways are essential for development and reproduction, but not major antiviral players."
-], image_path=os.path.join(FIGURES_DIR, "page_06_img_01.png"), image_left=Inches(1.8), image_top=Inches(3.4), image_width=Inches(10.0))
+# ============================================================
+# SLIDE 6: KEY OBSERVATION 1 + FIGURE 2
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Key Observation 1: miRNA & piRNA Pathways Control Development",
+           "Knockdown phenotypes in L. striatellus (Figure 2)")
+# Left: bullets
+add_bullets(s, [
+    "miRNA pathway (AGO1, DCR1):",
+    "   • Reduced survival and molting defects",
+    "   • Severely reduced fecundity; eggs failed to hatch",
+    "   • 22-nt miRNA production dropped",
+    "piRNA pathway (Piwi, AGO3):",
+    "   • Abnormal wing curls and reduced egg production",
+    "   • Extended developmental duration",
+    "Interpretation: essential for development/reproduction, not major antiviral players.",
+], Inches(0.6), Inches(1.45), Inches(6.2), Inches(5.4), font_size=17, gap=10)
+# Right: Figure 2
+fig2 = os.path.join(FIGURES_DIR, "page_06_img_01.png")
+if os.path.exists(fig2):
+    add_fig(s, fig2, left=Inches(7.1), top=Inches(1.5), width=Inches(5.7))
+add_footer(s, 6)
 
-# Slide 7: From Observation 1 to next analysis
-s7 = make_content_slide(prs, "From Observation 1 to the Next Question", [
-    "Observation 1: miRNA and piRNA gene knockdowns affected development/reproduction but did not increase viral load.",
+# ============================================================
+# SLIDE 7: LOGICAL BRIDGE
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "From Observation 1 to the Next Question",
+           "The logical chain that guided the study")
+add_bullets(s, [
+    "Observation 1: miRNA and piRNA knockdowns affected development and reproduction",
+    "   but did not increase viral accumulation.",
     "",
     "Question raised:",
-    "  If miRNA/piRNA are not the main antiviral pathways, what is the role of the canonical siRNA pathway?",
+    "   If miRNA/piRNA are not the main antiviral pathways, what is the role of",
+    "   the canonical siRNA pathway?",
     "",
-    "Next analysis:",
-    "  Knockdown the three core siRNA genes:",
-    "   • AGO2 — antiviral effector",
+    "Next analysis: Knockdown the three core siRNA genes:",
+    "   • AGO2 — antiviral effector nuclease",
     "   • DCR2 — cleaves viral dsRNA into siRNAs",
     "   • R2D2 — loads siRNAs onto AGO2",
-    "  Then measure viral RNA and vsiRNA production."
-])
+    "   Then measure viral RNA levels and vsiRNA production.",
+], Inches(0.7), Inches(1.5), Inches(12.0), Inches(5.2), font_size=19, gap=12)
+add_footer(s, 7)
 
-# Slide 8: Key Observation 2 - AGO2 vs DCR2 + image Fig 4
-s8 = make_content_slide(prs, "Key Observation 2: AGO2, Not DCR2, Restricts Viral Accumulation", [
+# ============================================================
+# SLIDE 8: KEY OBSERVATION 2 + FIGURE 4
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Key Observation 2: AGO2, Not DCR2, Restricts Viral Accumulation",
+           "siRNA pathway knockdown effects (Figure 4)")
+add_bullets(s, [
     "AGO2 knockdown:",
-    "   • Significantly increased accumulation of four ISVs and RSV.",
-    "   • vsiRNA reads rose with viral RNA.",
-    "   • Normalized vsiRNA per viral copy fell, indicating impaired antiviral RNAi.",
+    "   • Significantly increased accumulation of four ISVs and RSV",
+    "   • vsiRNA reads increased with viral RNA",
+    "   • Normalized vsiRNA per viral copy fell — impaired antiviral RNAi",
     "DCR2 and R2D2 knockdown:",
-    "   • No detectable increase in viral accumulation.",
-    "   • Canonical 21–22 nt vsiRNA profiles were preserved."
-], image_path=os.path.join(FIGURES_DIR, "page_10_img_01.png"), image_left=Inches(3.5), image_top=Inches(3.4), image_width=Inches(7.5))
+    "   • No detectable increase in viral accumulation",
+    "   • Canonical 21–22 nt vsiRNA profiles preserved",
+], Inches(0.6), Inches(1.45), Inches(6.2), Inches(5.4), font_size=17, gap=10)
+fig4 = os.path.join(FIGURES_DIR, "page_10_img_01.png")
+if os.path.exists(fig4):
+    add_fig(s, fig4, left=Inches(7.1), top=Inches(1.5), width=Inches(5.7))
+add_footer(s, 8)
 
-# Slide 9: CRISPR DCR2 knockout + image Fig 5
-s9 = make_content_slide(prs, "Deeper Validation: CRISPR/Cas9 Reveals DCR2 Is Essential for Embryos", [
+# ============================================================
+# SLIDE 9: CRISPR VALIDATION + FIGURE 5
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "CRISPR/Cas9 Validation: DCR2 Is Essential for Embryos",
+           "Genetic knockout confirms developmental role (Figure 5)")
+add_bullets(s, [
     "Why CRISPR? RNAi knockdown may leave residual DCR2 activity.",
     "Two DCR2 mutant alleles generated (5-bp deletion + 9-bp insertion; 8-bp deletion).",
-    "Result: No homozygous mutants recovered in G2; unhatched eggs carried homozygous mutations.",
-    "Heterozygous mutants: reduced DCR2 expression but no viral increase; delayed nymph development.",
-    "Conclusion: DCR2 is essential for embryonic viability, not detectably required for the measured antiviral response."
-], image_path=os.path.join(FIGURES_DIR, "page_12_img_01.png"), image_left=Inches(2.5), image_top=Inches(3.8), image_width=Inches(8.5))
+    "Result: No homozygous mutants recovered in G2; unhatched eggs carried",
+    "homozygous DCR2 mutations → embryonic lethality.",
+    "Heterozygous mutants: reduced DCR2, no viral increase, delayed nymph development.",
+    "Conclusion: DCR2 is essential for development, not required for measured",
+    "antiviral RNAi response.",
+], Inches(0.6), Inches(1.45), Inches(6.2), Inches(5.4), font_size=17, gap=10)
+fig5 = os.path.join(FIGURES_DIR, "page_12_img_01.png")
+if os.path.exists(fig5):
+    add_fig(s, fig5, left=Inches(7.1), top=Inches(1.5), width=Inches(5.7))
+add_footer(s, 9)
 
-# Slide 10: Cross-species validation + image Fig 6
-s10 = make_content_slide(prs, "Cross-Species Validation: Conserved AGO2-Dependent Antiviral Role", [
-    "Tested three additional hemipteran species:",
-    "   • Sogatella furcifera (Delphacidae)",
-    "   • Nilaparvata lugens (Delphacidae)",
-    "   • Bemisia tabaci (Aleyrodidae)",
-    "In all three: AGO2 knockdown increased viral accumulation, while DCR2 knockdown did not.",
-    "This supports a conserved AGO2-centric antiviral phenotype across Hemiptera."
-], image_path=os.path.join(FIGURES_DIR, "page_13_img_01.png"), image_left=Inches(0.8), image_top=Inches(3.5), image_width=Inches(11.8))
+# ============================================================
+# SLIDE 10: CROSS-SPECIES + FIGURE 6
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Cross-Species Validation: Conserved AGO2-Dependent Antiviral Role",
+           "Same AGO2 / DCR2 contrast in three more species (Figure 6)")
+add_bullets(s, [
+    "Tested: S. furcifera, N. lugens, B. tabaci",
+    "In all three species:",
+    "   • AGO2 knockdown increased viral accumulation",
+    "   • DCR2 knockdown had no detectable effect",
+    "Supports a conserved AGO2-centric antiviral phenotype across Hemiptera.",
+], Inches(0.6), Inches(1.45), Inches(6.2), Inches(5.4), font_size=17, gap=10)
+fig6 = os.path.join(FIGURES_DIR, "page_13_img_01.png")
+if os.path.exists(fig6):
+    add_fig(s, fig6, left=Inches(7.1), top=Inches(1.5), width=Inches(5.7))
+add_footer(s, 10)
 
-# Slide 11: How Findings Were Connected (flow diagram)
-s11 = prs.slides.add_slide(prs.slide_layouts[6])
-add_background(s11)
-add_header_bar(s11)
-add_title_text(s11, "How the Findings Were Connected")
-
+# ============================================================
+# SLIDE 11: FLOW DIAGRAM
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "How the Findings Were Connected",
+           "Logical flow from question to conclusion")
 flow_items = [
-    ("Research Question", "Roles of RNAi pathways in hemipteran antiviral immunity?"),
-    ("Data Collection", "RNAi + sRNA-seq + CRISPR in 4 hemipteran species"),
-    ("Observation 1", "miRNA/piRNA genes control development/reproduction"),
-    ("Analysis 1", "Focus on siRNA pathway: knockdown AGO2, DCR2, R2D2"),
+    ("Research Question", "Roles of RNAi in hemipteran antiviral immunity?"),
+    ("Data Collected", "RNAi + sRNA-seq + CRISPR in 4 species"),
+    ("Observation 1", "miRNA/piRNA: development/reproduction, not antiviral"),
+    ("Analysis 1", "Focus on siRNA: knockdown AGO2, DCR2, R2D2"),
     ("Observation 2", "Only AGO2 depletion increases viral load"),
     ("Analysis 2", "CRISPR/Cas9 DCR2 knockout + RNAi-of-RNAi"),
-    ("Final Conclusion", "AGO2 is antiviral; DCR2 is essential for embryonic development")
+    ("Conclusion", "AGO2 is antiviral; DCR2 is essential for embryos"),
 ]
-
-y_start = 1.35
-box_height = 0.62
-box_width = 11.5
-spacing = 0.82
-
-for i, (header, text) in enumerate(flow_items):
-    y = y_start + i * spacing
-    fill_color = DARK_BLUE if (i == 0 or i == len(flow_items) - 1) else MEDIUM_BLUE
-    shape = s11.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.9), Inches(y), Inches(box_width), Inches(box_height))
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = fill_color
-    shape.line.color.rgb = TEXT_LIGHT
-    tb = s11.shapes.add_textbox(Inches(1.0), Inches(y + 0.05), Inches(box_width - 0.2), Inches(box_height - 0.1))
-    tf = tb.text_frame
-    p = tf.paragraphs[0]
-    p.text = f"{header}: {text}"
-    p.font.size = Pt(15)
-    p.font.bold = True
-    p.font.color.rgb = TEXT_LIGHT
+y = 1.45
+bx_h = 0.68
+bx_w = 11.6
+gap = 0.86
+for i, (hdr, txt) in enumerate(flow_items):
+    box = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE,
+                             Inches(0.87), Inches(y), Inches(bx_w), Inches(bx_h))
+    box.fill.solid()
+    box.fill.fore_color.rgb = NAVY if (i == 0 or i == len(flow_items)-1) else STEEL
+    box.line.color.rgb = WHITE
+    box.shadow.inherit = False
+    tbf = s.shapes.add_textbox(Inches(1.05), Inches(y + 0.04), Inches(bx_w - 0.4), Inches(bx_h - 0.08))
+    tff = tbf.text_frame; tff.word_wrap = True
+    pp = tff.paragraphs[0]
+    pp.text = f"{hdr}: {txt}"
+    pp.font.size = Pt(15); pp.font.bold = True; pp.font.color.rgb = WHITE
+    pp.font.name = "Calibri"
+    pp.alignment = PP_ALIGN.CENTER
     if i < len(flow_items) - 1:
-        arrow = s11.shapes.add_shape(MSO_SHAPE.DOWN_ARROW, Inches(6.6), Inches(y + box_height + 0.04), Inches(0.25), Inches(0.12))
-        arrow.fill.solid()
-        arrow.fill.fore_color.rgb = ACCENT_ORANGE
-        arrow.line.fill.background()
+        ar = s.shapes.add_shape(MSO_SHAPE.DOWN_ARROW, Inches(6.5), Inches(y + bx_h + 0.03), Inches(0.35), Inches(0.14))
+        ar.fill.solid(); ar.fill.fore_color.rgb = ORANGE
+        ar.line.fill.background(); ar.shadow.inherit = False
+    y += gap
+add_footer(s, 11)
 
-# Slide 12: Main Findings
-s12 = make_content_slide(prs, "Main Findings", [
+# ============================================================
+# SLIDE 12: MAIN FINDINGS
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Main Findings", "Five key results from the study")
+add_bullets(s, [
     "1. miRNA and piRNA pathways are essential for survival, development, and reproduction in L. striatellus.",
-    "2. AGO2 is required for antiviral siRNA-mediated immunity in L. striatellus.",
+    "2. AGO2 is required for antiviral siRNA-mediated immunity.",
     "3. DCR2 and R2D2 knockdown did not impair measured antiviral responses or vsiRNA profiles.",
-    "4. DCR2 is essential for embryonic development—homozygous CRISPR mutants are lethal.",
-    "5. The AGO2-essential / DCR2-dispensable antiviral pattern is conserved across three additional hemipteran species."
-])
+    "4. DCR2 is essential for embryonic development — homozygous CRISPR mutants are lethal.",
+    "5. The AGO2-essential / DCR2-dispensable antiviral pattern is conserved across three additional",
+    "   hemipteran species.",
+], Inches(0.7), Inches(1.5), Inches(12.0), Inches(5.2), font_size=19, gap=14)
+add_footer(s, 12)
 
-# Slide 13: Research question table
-s13 = prs.slides.add_slide(prs.slide_layouts[6])
-add_background(s13)
-add_header_bar(s13)
-add_title_text(s13, "How the Findings Answered the Research Question")
-rows = 5
-cols = 3
-left = Inches(0.5)
-top = Inches(1.35)
-width = Inches(12.333)
-height = Inches(5.2)
-table = s13.shapes.add_table(rows, cols, left, top, width, height).table
-table_data = [
+# ============================================================
+# SLIDE 13: TABLE - Q&A
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "How the Findings Answered the Research Question",
+           "Mapping evidence to conclusions")
+rows, cols = 5, 3
+tbl_shape = s.shapes.add_table(rows, cols, Inches(0.5), Inches(1.4), Inches(12.3), Inches(5.1))
+table = tbl_shape.table
+# Column widths
+table.columns[0].width = Inches(3.6)
+table.columns[1].width = Inches(4.8)
+table.columns[2].width = Inches(3.9)
+data = [
     ["Research Question", "Evidence Found", "Conclusion"],
-    ["What roles do miRNA/piRNA pathways play?", "Knockdown caused developmental defects, reduced survival and fecundity; no antiviral effect", "miRNA/piRNA are essential for development/reproduction, not antiviral defense"],
-    ["Is the siRNA pathway antiviral?", "AGO2 knockdown increased viral load; DCR2/R2D2 knockdown did not", "siRNA pathway is antiviral, with AGO2 as the key effector"],
-    ["Is DCR2 required for antiviral RNAi?", "vsiRNA profiles unchanged after DCR2 knockdown; CRISPR heterozygotes showed no viral increase", "DCR2 is not required for the measured antiviral RNAi response"],
-    ["Are findings conserved across Hemiptera?", "Same AGO2/DCR2 contrast in S. furcifera, N. lugens, and B. tabaci", "Pattern is conserved among the hemipteran species examined"]
+    ["Roles of miRNA/piRNA?", "Knockdown → developmental defects, lower survival and fecundity; no antiviral effect",
+     "Essential for development/reproduction, not antiviral defense"],
+    ["Is siRNA pathway antiviral?", "AGO2 knockdown ↑ viral load; DCR2/R2D2 knockdown did not",
+     "siRNA pathway is antiviral; AGO2 is the key effector"],
+    ["Is DCR2 required for antiviral RNAi?", "vsiRNA profiles unchanged after DCR2 knockdown; CRISPR heterozygotes show no viral increase",
+     "DCR2 not required for measured antiviral RNAi under tested conditions"],
+    ["Conserved across Hemiptera?", "Same AGO2/DCR2 contrast in S. furcifera, N. lugens, B. tabaci",
+     "Pattern conserved among examined hemipteran species"],
 ]
-for i, row in enumerate(table_data):
+for i, row in enumerate(data):
     for j, val in enumerate(row):
         cell = table.cell(i, j)
         cell.text = val
-        cell.text_frame.paragraphs[0].font.size = Pt(13)
-        cell.text_frame.word_wrap = True
+        cell.margin_left = Inches(0.08); cell.margin_right = Inches(0.08)
+        cell.margin_top = Inches(0.05); cell.margin_bottom = Inches(0.05)
+        cell.vertical_anchor = MSO_ANCHOR.MIDDLE
+        for p in cell.text_frame.paragraphs:
+            for r in p.runs:
+                r.font.name = "Calibri"
+                r.font.size = Pt(12.5 if i > 0 else 14)
+                r.font.bold = (i == 0)
+                r.font.color.rgb = WHITE if i == 0 else DARK_TEXT
         if i == 0:
-            cell.fill.solid()
-            cell.fill.fore_color.rgb = DARK_BLUE
-            cell.text_frame.paragraphs[0].font.color.rgb = TEXT_LIGHT
-            cell.text_frame.paragraphs[0].font.bold = True
+            cell.fill.solid(); cell.fill.fore_color.rgb = NAVY
         else:
-            cell.fill.solid()
-            cell.fill.fore_color.rgb = LIGHT_BLUE if i % 2 == 0 else BG_LIGHT
+            cell.fill.solid(); cell.fill.fore_color.rgb = WHITE if i % 2 else LIGHT
+add_footer(s, 13)
 
-# Slide 14: Strengths and Limitations
-s14 = make_content_slide(prs, "Strengths and Limitations", [
-    "Strengths:",
-    "   • Multi-species validation across two hemipteran families.",
-    "   • Combination of RNAi knockdown and CRISPR/Cas9 genetics.",
-    "   • Comprehensive small RNA sequencing to assess pathway activity.",
-    "   • RNAi-of-RNAi assay provided an independent functional readout.",
-    "",
-    "Limitations:",
-    "   • RNAi knockdown may leave residual DCR2 activity.",
-    "   • Homozygous DCR2 mutants died as embryos, so adult antiviral phenotypes could not be tested.",
-    "   • Alternative vsiRNA biogenesis mechanisms were not identified.",
-    "   • Experiments performed under specific lab conditions; field relevance needs further study."
-])
+# ============================================================
+# SLIDE 14: STRENGTHS & LIMITATIONS
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Strengths and Limitations", "Critical appraisal of the study")
+# Two columns
+lb = s.shapes.add_textbox(Inches(0.7), Inches(1.5), Inches(5.9), Inches(5.2))
+ltf = lb.text_frame; ltf.word_wrap = True
+p = ltf.paragraphs[0]; p.text = "Strengths"; p.font.size = Pt(19); p.font.bold = True; p.font.color.rgb = GREEN
+p.font.name = "Calibri"; p.space_after = Pt(10)
+for item in ["Multi-species validation across two hemipteran families",
+             "RNAi knockdown combined with CRISPR/Cas9 genetics",
+             "Comprehensive small RNA sequencing",
+             "RNAi-of-RNAi assay as independent functional readout"]:
+    p = ltf.add_paragraph(); p.text = "• " + item
+    p.font.size = Pt(16); p.font.color.rgb = DARK_TEXT; p.font.name = "Calibri"
+    p.space_after = Pt(9); p.line_spacing = 1.12
 
-# Slide 15: Conclusions
-s15 = make_content_slide(prs, "Conclusions", [
+rb = s.shapes.add_textbox(Inches(6.8), Inches(1.5), Inches(5.9), Inches(5.2))
+rtf = rb.text_frame; rtf.word_wrap = True
+p = rtf.paragraphs[0]; p.text = "Limitations"; p.font.size = Pt(19); p.font.bold = True; p.font.color.rgb = RED
+p.font.name = "Calibri"; p.space_after = Pt(10)
+for item in ["RNAi knockdown may leave residual DCR2 activity",
+             "Homozygous DCR2 mutants died as embryos; adult antiviral phenotypes not testable",
+             "Alternative vsiRNA biogenesis mechanisms not identified",
+             "Lab conditions only; field relevance needs further study"]:
+    p = rtf.add_paragraph(); p.text = "• " + item
+    p.font.size = Pt(16); p.font.color.rgb = DARK_TEXT; p.font.name = "Calibri"
+    p.space_after = Pt(9); p.line_spacing = 1.12
+add_footer(s, 14)
+
+# ============================================================
+# SLIDE 15: CONCLUSIONS
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s)
+add_header(s, "Conclusions", "What the study demonstrated")
+add_bullets(s, [
     "The canonical DCR2-centered model of antiviral RNAi from Diptera does not fully explain hemipteran antiviral immunity.",
     "AGO2 is the conserved antiviral effector across the tested hemipteran species.",
     "DCR2 has an essential developmental role, particularly during embryogenesis.",
     "DCR2 depletion does not detectably impair the measured antiviral siRNA response in L. striatellus.",
-    "Future work should identify alternative nucleases or mechanisms responsible for vsiRNA production in hemipterans."
-])
+    "Future work should identify alternative nucleases or mechanisms for vsiRNA production in hemipterans.",
+], Inches(0.7), Inches(1.5), Inches(12.0), Inches(5.2), font_size=19, gap=14)
+add_footer(s, 15)
 
-# Slide 16: Take-Home Message
-s16 = make_content_slide(prs, "Take-Home Message", [
-    "What did they ask?",
-    "   What are the roles of conserved RNAi pathways in hemipteran antiviral immunity?",
-    "",
-    "What did they do?",
-    "   Used RNAi knockdown, CRISPR/Cas9, and small RNA sequencing in four hemipteran species.",
-    "",
-    "What did they find?",
-    "   AGO2 is essential for antiviral defense; DCR2 is essential for development but not for the measured antiviral response.",
-    "",
-    "Why does it matter?",
-    "   It challenges the prevailing DCR2-centered model of insect antiviral RNAi and suggests lineage-specific organization of RNAi pathways."
-])
+# ============================================================
+# SLIDE 16: TAKE-HOME MESSAGE
+# ============================================================
+s = prs.slides.add_slide(BLANK)
+add_bg(s, NAVY)
+# Center card
+card = s.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(1.0), Inches(1.5), Inches(11.33), Inches(4.6))
+card.fill.solid(); card.fill.fore_color.rgb = WHITE
+card.line.color.rgb = ORANGE; card.line.width = Pt(2)
+card.shadow.inherit = False
 
-# Save
-output_path = os.path.join(BASE_DIR, "RNAi_Hemiptera_Presentation.pptx")
-prs.save(output_path)
-print(f"Presentation saved to: {output_path}")
+tb = s.shapes.add_textbox(Inches(1.4), Inches(1.9), Inches(10.5), Inches(3.9))
+tf = tb.text_frame; tf.word_wrap = True
+sections = [
+    ("What did they ask?", "What are the roles of conserved RNAi pathways in hemipteran antiviral immunity?", False),
+    ("What did they do?", "RNAi knockdown, CRISPR/Cas9 knockout, and small RNA sequencing in four hemipteran species.", False),
+    ("What did they find?", "AGO2 is essential for antiviral defense; DCR2 is essential for development but not for the measured antiviral response.", True),
+    ("Why does it matter?", "It challenges the prevailing DCR2-centered model of insect antiviral RNAi and suggests lineage-specific organization of RNAi pathways.", False),
+]
+first = True
+for h, body, bold in sections:
+    p = tf.paragraphs[0] if first else tf.add_paragraph()
+    first = False
+    p.text = h
+    p.font.size = Pt(20); p.font.bold = True; p.font.color.rgb = NAVY
+    p.font.name = "Calibri"; p.space_after = Pt(4)
+    p2 = tf.add_paragraph(); p2.text = body
+    p2.font.size = Pt(16); p2.font.color.rgb = DARK_TEXT
+    p2.font.name = "Calibri"; p2.space_after = Pt(14); p2.line_spacing = 1.15
+
+prs.save(OUTPUT)
+print(f"Saved: {OUTPUT}")
+print(f"Slides: {len(prs.slides)}")
